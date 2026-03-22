@@ -6,7 +6,7 @@ import socket
 
 def generate_header(dname, txid):
     """
-    
+    Generates header, using bytes, and converting the server name to the required header format.    
     """
     header = struct.pack("!HHHHHH", txid, 0x0000, 1, 0, 0, 0)
     qname = b''
@@ -24,6 +24,7 @@ def generate_header(dname, txid):
 
 def send_query(domain, server_ip):
     """
+    Sends the query using a UDP socker, to the corresponding IP requested, using the DNS port, and returns the data returned by the server.
     """
     txid = secrets.randbits(16) 
     try:
@@ -114,9 +115,8 @@ def parse_records(data, offset, count):
 
 def parse_response(txid, data):
     """
-    Unpacks the DNS response using the struct module.
+    Unpacks the DNS response, cheking if the response matches the transaction id, adding it to the list and skiping over the QTYPE and QCLASS.
     """
-    # 1. Unpack Header
     header = struct.unpack("!HHHHHH", data[:12])
     txid_recv, flags, qdcount, ancount, nscount, arcount = header
     
@@ -125,17 +125,14 @@ def parse_response(txid, data):
 
     offset = 12
 
-    # 2. Skip over the Questions section
     for _ in range(qdcount):
         _, offset = parse_domain_name(data, offset)
         offset += 4  # Skip QTYPE and QCLASS
 
-    # 3. Parse each section sequentially, capturing the updated offset each time
     answers, offset = parse_records(data, offset, ancount)
     authorities, offset = parse_records(data, offset, nscount)
     additionals, offset = parse_records(data, offset, arcount)
 
-    # 4. Return the dictionary structure
     return {
         "header_counts": {"ancount": ancount, "nscount": nscount, "arcount": arcount},
         "answers": answers,
